@@ -23,8 +23,7 @@ def create_tarball():
 	rootfs_dir = os.path.join(workdir, 'rootfs')
 	os.mkdir(rootfs_dir)
 	image = opts.image
-	r = subprocess.call(['tar', '--anchored', '--numeric-owner', 
-						 '--exclude="dev/*"', '--numeric-owner',
+	r = subprocess.call(['tar', '--anchored', '--numeric-owner', '--exclude="dev/*"',
 						 '-zxf', image, '-C', rootfs_dir])
 
 	epoch = time.time()

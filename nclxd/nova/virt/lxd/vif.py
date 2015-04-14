@@ -12,20 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import getpass
-
-import os
-
-from oslo.config import cfg
-from oslo_log import log as logging
-from oslo_concurrency import processutils
-
-
-from nova.i18n import _LW, _
 from nova import exception
-from nova import utils
+from nova.i18n import _
 from nova.network import linux_net
 from nova.network import model as network_model
+from nova import utils
+from oslo.config import cfg
+from oslo_concurrency import processutils
+from oslo_log import log as logging
 
 
 CONF = cfg.CONF
@@ -128,19 +122,19 @@ class LXDNetworkBridgeDriver(object):
         if (not network.get_meta('multi_host', False) and
                 network.get_meta('should_create_bridge', False)):
             if network.get_meta('should_create_vlan', False):
-                iface = CONF.vlan_interface or \
-                    network.get_meta('bridge_interface')
+                iface = CONF.vlan_interface or (
+                    network.get_meta('bridge_interface'))
                 LOG.debug('Ensuring vlan %(vlan)s and bridge %(bridge)s',
                           {'vlan': network.get_meta('vlan'),
                            'bridge': vif['network']['bridge']},
                           instance=instance)
                 linux_net.LinuxBridgeInterfaceDriver.ensure_vlan_bridge(
                     network.get_meta('vlan'),
-                     vif['network']['bridge'],
-                     iface)
+                    vif['network']['bridge'],
+                    iface)
             else:
-                iface = CONF.flat_interface or \
-                    network.get_meta('bridge_interface')
+                iface = CONF.flat_interface or (
+                    network.get_meta('bridge_interface'))
                 LOG.debug("Ensuring bridge %s",
                           vif['network']['bridge'], instance=instance)
                 linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(

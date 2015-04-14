@@ -21,23 +21,19 @@ Nova LXD Driver
 
 """
 
-import socket
 import multiprocessing
-
-from oslo.utils import units
-
-from oslo.config import cfg
-from oslo_log import log as logging
-from oslo.serialization import jsonutils
+import socket
 
 import client
-
-from nova.i18n import _
-from nova.virt import driver
-from nova.virt import hardware
-
 import container
 import host_utils
+from nova.virt import driver
+from nova.virt import hardware
+from oslo.config import cfg
+from oslo.serialization import jsonutils
+from oslo.utils import units
+from oslo_log import log as logging
+
 
 lxd_opts = [
     cfg.StrOpt('lxd_socket',
@@ -84,17 +80,19 @@ class LXDDriver(driver.ComputeDriver):
               admin_password, network_info=None, block_device_info=None,
               flavor=None):
         self.container.container_start(context, instance, image_meta,
-                                       injected_files, admin_password, network_info,
-                                       block_device_info, flavor)
+                                       injected_files, admin_password,
+                                       network_info, block_device_info,
+                                       flavor)
 
     def snapshot(self, context, instance, name, update_task_state):
         raise NotImplemented()
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
-        self.container.container_restart(
-            context, instance, network_info, reboot_type,
-                                         block_device_info, bad_volumes_callback)
+        self.container.container_restart(context, instance,
+                                         network_info, reboot_type,
+                                         block_device_info,
+                                         bad_volumes_callback)
 
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
@@ -145,12 +143,14 @@ class LXDDriver(driver.ComputeDriver):
         return self.container.container_suspend(instance)
 
     def resume(self, context, instance, network_info, block_device_info=None):
-        return self.container.container_resume(context, instance, network_info, block_device_info)
+        return self.container.container_resume(context, instance, network_info,
+                                               block_device_info)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):
-        return self.container.container_destroy(
-            context, instance, network_info, block_device_info,
+        return self.container.container_destroy(context, instance,
+                                                network_info,
+                                                block_device_info,
                                                 destroy_disks, migrate_data)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,

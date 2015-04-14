@@ -14,16 +14,14 @@
 
 import os
 
-
-from oslo.config import cfg
-from oslo_log import log as logging
-from oslo_utils import excutils
-
-from nova.i18n import _, _LE
+from nova.i18n import _
+from nova.i18n import _LE
 from nova.openstack.common import fileutils
 from nova import utils
 from nova.virt import images
-from nova import exception
+from oslo.config import cfg
+from oslo_log import log as logging
+from oslo_utils import excutils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -72,8 +70,8 @@ class ContainerImage(object):
                          max_size=max_size)
         except Exception:
             LOG.exception(_LE("Image %(image_id)s doesn't exist anymore on "
-                          "image service, attempting to copy image ",
-                              {'image_id': instance.image_ref}))
+                              "image service, attempting to copy image "),
+                          {'image_id': instance.image_ref})
 
         fileutils.ensure_tree(self.image_dir)
         (user, group) = self.idmap.get_user()
@@ -102,18 +100,19 @@ class ContainerImage(object):
                                               instance.uuid, 'rootfs')
                 if not os.path.exists(self.upper_dir):
                     utils.execute('mkdir', '-p', self.upper_dir,
-                              run_as_root=True)
+                                  run_as_root=True)
 
                 self.work_dir = os.path.join(CONF.lxd.lxd_root_dir,
-                                                instance.uuid, 'workdir')
+                                             instance.uuid, 'workdir')
                 if not os.path.exists(self.work_dir):
                     utils.execute('mkdir', '-p', self.work_dir,
-                              run_as_root=True)
+                                  run_as_root=True)
 
                 utils.execute('mount', '-t', 'overlayfs', 'overlayfs',
                               '-o',
                               'lowerdir=%s,upperdir=%s,workdir=%s'
-                              % (self.image_dir, self.upper_dir, self.work_dir),
+                              % (self.image_dir, self.upper_dir,
+                                 self.work_dir),
                               self.rootfs_dir,
                               run_as_root=True)
         except Exception:

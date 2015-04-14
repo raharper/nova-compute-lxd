@@ -15,22 +15,22 @@
 import os
 import pwd
 
+from . import images
+from . import utils as container_utils
+from . import vif as lxd_vif
+from nova.compute import power_state
+from nova import exception
+from nova.i18n import _
+from nova.i18n import _LE
+from nova.i18n import _LI
+from nova.i18n import _LW
+from nova.openstack.common import loopingcall
+from nova import utils
 from oslo.config import cfg
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
-
-from nova.openstack.common import loopingcall
-
-from nova.i18n import _, _LW, _LE, _LI
-from nova import utils
-from nova import exception
-from nova.compute import power_state
-
-
-from . import vif
-from . import images
-from . import utils as container_utils
 
 CONF = cfg.CONF
 CONF.import_opt('vif_plugging_timeout', 'nova.virt.driver')
@@ -62,7 +62,7 @@ class Container(object):
         self.idmap = container_utils.LXCUserIdMap()
         self.image = images.ContainerImage(self.client,
                                            self.idmap)
-        self.vif_driver = vif.LXDGenericDriver()
+        self.vif_driver = lxd_vif.LXDGenericDriver()
 
     def init_host(self):
         (status, resp) = self.client.ping()
@@ -71,8 +71,8 @@ class Container(object):
             raise exception.HypervisorUnavailable(msg)
 
     def container_start(self, context, instance, image_meta, injected_files,
-                        admin_password, network_info=None, block_device_info=None,
-                        flavor=None):
+                        admin_password, network_info=None,
+                        block_device_info=None, flavor=None):
         LOG.info(_LI('Spawning new instance'), instance=instance)
         if self.client.container_defined(instance.uuid):
             raise exception.InstanceExists(name=instance.uuid)
@@ -104,8 +104,9 @@ class Container(object):
             self.config_container(instance, network_info)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Failed to configure container for: %s(instnace)s'),
-                          {'instance': instance.uuid})
+                LOG.error(
+                    _LE('Failed to configure container for: %s(instnace)s'),
+                    {'instance': instance.uuid})
                 self.container_destroy(context, instance, network_info,
                                        block_device_info,
                                        destroy_disks=None, migrate_data=None)
@@ -142,7 +143,6 @@ class Container(object):
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
         timer.start(interval=0.5).wait()
 
-
     def setup_container(self, instance, network_info):
         container_rootfs = self._get_container_rootfs(instance)
         container = {'name': instance.uuid,
@@ -153,9 +153,10 @@ class Container(object):
                 raise exception.NovaException
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Failed to setup container %(instance)s. LXD response %(response)s'),
-                            {'instance': instance.uuid,
-                            'response': resp})
+                LOG.error(
+                    _LE('Failed to setup container %(instance)s.'
+                        'LXD response %(response)s'),
+                    {'instance': instance.uuid, 'response': resp})
 
         oid = resp.get('operation').split('/')[3]
         if not oid:
@@ -173,18 +174,21 @@ class Container(object):
 
         console_log = self._get_console_path(instance)
         if not network_info:
-            container_config =  {'config': {'raw.lxc': 'lxc.console.logfile=%s\n'
-                                            % console_log}}
+            container_config = {'config':
+                                {'raw.lxc': 'lxc.console.logfile=%s\n' %
+                                    console_log}}
         else:
             network_devices = self._get_container_devices(network_info)
-            container_config = {'config': {'raw.lxc': 'lxc.console.logfile=%s\n'
-                                           % console_log},
-                                'devices':  network_devices}
+            container_config = {'config':
+                                {'raw.lxc': 'lxc.console.logfile=%s\n' %
+                                    console_log},
+                                'devices': network_devices}
 
         try:
-            (status, resp) = self.client.container_update(
-                                instance.uuid, container_config)
-            (status, resp) = self.client.container_update(instance.uuid, container_config)
+            (status, resp) = self.client.container_update(instance.uuid,
+                                                          container_config)
+            (status, resp) = self.client.container_update(instance.uuid,
+                                                          container_config)
             if resp.get('status') != 'OK':
                 raise exception.NovaException
         except Exception as e:
@@ -192,8 +196,6 @@ class Container(object):
             msg = _('Container update failed: {0}')
             raise exception.NovaException(msg.format(e),
                                           instance_id=instance.name)
-
-
 
     def container_restart(self, context, instance, network_info, reboot_type,
                           block_device_info=None, bad_volumes_callback=None):
@@ -207,7 +209,8 @@ class Container(object):
             raise exception.NovaException(msg.format(e),
                                           instance_id=instance.name)
 
-    def container_power_on(self, instance, shutdown_timeout=0, shutdown_attempts=0):
+    def container_power_on(self, instance, shutdown_timeout=0,
+                           shutdown_attempts=0):
         try:
             (status, resp) = self.client.container_stop(instance.uuid)
             if resp.get('status') != 'OK':
@@ -240,7 +243,8 @@ class Container(object):
             raise exception.NovaException(msg.format(e),
                                           instance_id=instance.name)
 
-    def container_resume(self, context, instance, network_info, block_device_info=None):
+    def container_resume(self, context, instance, network_info,
+                         block_device_info=None):
         try:
             (status, resp) = self.client.container_resume(instance.uuid)
             if resp.get('status') != 'OK':
@@ -251,13 +255,12 @@ class Container(object):
             raise exception.NovaException(msg.format(e),
                                           instance_id=instance.name)
 
-    def container_destroy(
-        self, context, instance, network_info, block_device_info,
-                destroy_disks, migrate_data):
+    def container_destroy(self, context, instance, network_info,
+                          block_device_info, destroy_disks, migrate_data):
 
         if not self.client.container_defined(instance.uuid):
             return
-        
+
         try:
             (status, resp) = self.client.container_delete(instance.uuid)
             if resp.get('status') != 'OK':
@@ -338,11 +341,10 @@ class Container(object):
         self._teardown_network(instance, network_info)
         try:
             rootfs = self._get_container_rootfs(instance)
-            utils.execute('umount', rootfs,
-                         attempts=3, run_as_root=True)
+            utils.execute('umount', rootfs, attempts=3,
+                          run_as_root=True)
         except processutils.ProcessExecutionError as exc:
-            LOG.exception(_LE("Couldn't unmount the share %s"),
-                              exc)
+            LOG.exception(_LE("Couldn't unmount the share %s"), exc)
 
     def _start_network(self, instance, network_info):
         for vif in network_info:
@@ -369,10 +371,12 @@ class Container(object):
             raise exception.VirtualInterfaceCreateException()
 
     def _get_container_rootfs(self, instance):
-        return os.path.join(CONF.lxd.lxd_root_dir, instance.uuid, 'rootfs')
+        return os.path.join(CONF.lxd.lxd_root_dir,
+                            instance.uuid, 'rootfs')
 
     def _get_console_path(self, instance):
-        return os.path.join(CONF.lxd.lxd_root_dir, instance.uuid, 'console.log')
+        return os.path.join(CONF.lxd.lxd_root_dir,
+                            instance.uuid, 'console.log')
 
     def _get_container_devices(self, network_info):
         for vif in network_info:

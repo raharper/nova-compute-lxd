@@ -12,9 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import grp
 import os
 import pwd
-import grp
+
 
 class LXCIdMap(object):
 
@@ -46,6 +47,7 @@ class LXCIdMap(object):
 
     def get_user(self):
         return (self.ustart, self.gstart)
+
 
 class LXCUserIdMap(LXCIdMap):
 
